@@ -176,10 +176,10 @@ def load_data(dataset):
     return rval
 
 
-def mlp_mnist(learning_rate=0.01, n_epochs=100,
+def mlp_mnist(learning_rate=0.01, n_epochs=20,
                            dataset='final_data.pkl.gz',
                            batch_size=20,
-                           n_hidden_1=50,n_hidden_2=20, L1_reg=0.0,L2_sq=0.0001,
+                           n_hidden_1=20,n_hidden_2=5, L1_reg=0.0,L2_sq=0.0001,
                            ):
 
     datasets = load_data(dataset)
@@ -332,6 +332,10 @@ def mlp_mnist(learning_rate=0.01, n_epochs=100,
                         )
                     )
 
+                    with open('mlp_best_model.pkl', 'wb') as f:
+                        pickle.dump(classifier, f)
+                        
+
                 # save the best model
 
             if patience <= iter:
@@ -352,16 +356,21 @@ def mlp_mnist(learning_rate=0.01, n_epochs=100,
            os.path.split(__file__)[1] +
            ' ran for %.1fs' % ((end_time - start_time))), file=sys.stderr)
 
-    #save at end to save some time :D
-    with open('mlp_best_model.pkl', 'wb') as f:
-                        pickle.dump(classifier, f)
-    # print(classifier.hiddenlayer_1.W.get_value())
-    # print(classifier.hiddenlayer_1.b.get_value()) 
-    predict_model = theano.function(
-        inputs=[classifer.input],
-        outputs=classifier.y_pred
-    )
 
+
+    print(classifier.logRegLayer.W.get_value())
+    
+    print(classifier.hiddenlayer_1.W.get_value())
+    print(classifier.hiddenlayer_1.b.get_value()) 
+
+    predict_model = theano.function(
+        inputs=[classifier.input],
+        outputs=classifier.logRegLayer.p_y_given_x)
+
+    # We can test it on some examples from test test `  
+    dataset='final_data.pkl.gz'
+    datasets = load_data(dataset)
+    train_set_x,train_set_y=datasets[0];
     train_set_x=train_set_x.get_value();
     predicted_values = predict_model(train_set_x[0:5])
 
@@ -378,27 +387,29 @@ def mlp_mnist(learning_rate=0.01, n_epochs=100,
 def predict():
 
     # load the saved model
-    classifier = pickle.load(open('mlp_best_model.pkl'))
+    # classifier = pickle.load(open('mlp_best_model.pkl'))
 
     # compile a predictor function
-    predict_model = theano.function(
-        inputs=[classifier.input],
-        outputs=classifier.y_pred)
+    # predict_model = theano.function(
+    #     inputs=[classifier.input],
+    #     outputs=classifier.y_pred)
 
-    # We can test it on some examples from test test `  
-    dataset='final_data.pkl.gz'
-    datasets = load_data(dataset)
-    train_set_x,train_set_y=datasets[0];
-    train_set_x=train_set_x.get_value();
-    predicted_values = predict_model(train_set_x[0:5])
+    # # We can test it on some examples from test test `  
+    # dataset='final_data.pkl.gz'
+    # datasets = load_data(dataset)
+    # train_set_x,train_set_y=datasets[0];
+    # train_set_x=train_set_x.get_value();
+    # predicted_values = predict_model(train_set_x[0:5])
 
-    print("Predicted values for the first 5 examples in test set:")
-    print(predicted_values)
+    # print("Predicted values for the first 5 examples in test set:")
+    # print(predicted_values)
+
+    print(classifier.logRegLayer.W.get_value())
 
 
 if __name__ == '__main__':
     mlp_mnist()
-    #predict()
+   # predict()
 
 
 

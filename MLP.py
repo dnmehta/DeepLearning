@@ -95,7 +95,6 @@ class LogisticRegression(object):
 
     def __init__(self, input, n_in, n_out):
         
-        # initialize with 0 the weights W (n_in,n_out)
         self.W = theano.shared(
             value=numpy.zeros(
                 (n_in, n_out),
@@ -104,7 +103,7 @@ class LogisticRegression(object):
             name='W',
             borrow=True
         )
-        # initialize the biases b as a vector of n_out 0s
+
         self.b = theano.shared(
             value=numpy.zeros(
                 (n_out,),
@@ -133,10 +132,9 @@ class LogisticRegression(object):
                 'y should have the same shape as self.y_pred',
                 ('y', y.type, 'y_pred', self.y_pred.type)
             )
-        # check if y is of the correct datatype
+
         if y.dtype.startswith('int'):
-            # the T.neq operator returns a vector of 0s and 1s, where 1
-            # represents a mistake in prediction
+  
             return T.mean(T.neq(self.y_pred, y))
         else:
             raise NotImplementedError()
@@ -144,12 +142,8 @@ class LogisticRegression(object):
 
 def load_data(dataset):
 
-    #############
-    # LOAD DATA #
-    #############
-    print('... loading data')
+    print('... loading')
 
-    # Load the dataset
     with gzip.open(dataset, 'rb') as f:
         try:
             train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
@@ -188,38 +182,28 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
     valid_set_x, valid_set_y = datasets[1]
     test_set_x, test_set_y = datasets[2]
 
-    # compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0] // batch_size
     print (n_train_batches)
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0] // batch_size
     n_test_batches = test_set_x.get_value(borrow=True).shape[0] // batch_size
 
-    ######################
-    # BUILD ACTUAL MODEL #
-    ######################
     print('... building the model')
 
-    # allocate symbolic variables for the data
+
     index = T.lscalar()  # index to a [mini]batch
 
-    # generate symbolic variables for input (x and y represent a
-    # minibatch)
     x = T.matrix('x')  # data, presented as rasterized images
     y = T.ivector('y')  # labels, presented as 1D vector of [int] labels
 
-    # construct the logistic regression class
-    # Each MNIST image has size 250*250
+
 
     rng = numpy.random.RandomState(1234)
 
     classifier = MLP(input=x,rng=rng, n_in=250*250*3,n_hidden_1=n_hidden_1,n_hidden_2=n_hidden_2,n_out=2)
 
-    # the cost we minimize during training is the negative log likelihood of
-    # the model in symbolic format
+
     cost = ( classifier.negative_log_likelihood(y) + L1_reg*classifier.L1 + L2_sq*classifier.L2_sq )
 
-    # compiling a Theano function that computes the mistakes that are made by
-    # the model on a minibatch
     test_model = theano.function(
         inputs=[index],
         outputs=classifier.errors(y),
@@ -238,16 +222,9 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
         }
     )
 
-    # compute the gradient of cost with respect to theta = (W,b)
-    # start-snippet-3
-    # specify how to update the parameters of the model as a list of
-    # (variable, update expression) pairs.
+
     updates=[ (params,params - learning_rate*T.grad(cost,params)) for params in classifier.params ]
 
-
-    # compiling a Theano function `train_model` that returns the cost, but in
-    # the same time updates the parameter of the model based on the rules
-    # defined in `updates`
     train_model = theano.function(
         inputs=[index],
         outputs=cost,
@@ -257,12 +234,8 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
-    # end-snippet-3
-
-    ###############
-    # TRAIN MODEL #
-    ###############
-    print('... training the model')
+ 
+    print('... training')
     # early-stopping parameters
     patience = 5000  # look as this many examples regardless
     patience_increase = 1  # wait this much longer when a new best is
@@ -270,10 +243,7 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
     improvement_threshold = 0.995  # a relative improvement of this much is
                                   # considered significant
     validation_frequency = min(n_train_batches, patience // 2)
-                                  # go through this many
-                                  # minibatches before checking the network
-                                  # on the validation set; in this case we
-                                  # check every epoch
+                                  
 
     best_validation_loss = numpy.inf
     test_score = 0.
@@ -286,11 +256,11 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
         for minibatch_index in range(n_train_batches):
             
             minibatch_avg_cost = train_model(minibatch_index)
-            # iteration number
+
             iter = (epoch - 1) * n_train_batches + minibatch_index
 
             if (iter + 1) % validation_frequency == 0:
-                # compute zero-one loss on validation set
+
                 validation_losses = [validate_model(i)
                                      for i in range(n_valid_batches)]
                 this_validation_loss = numpy.mean(validation_losses)
@@ -331,12 +301,12 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
                             test_score * 100.
                         )
                     )
-
+                    # save the best model till now
                     with open('mlp_best_model.pkl', 'wb') as f:
                         pickle.dump(classifier, f)
                         
 
-                # save the best model
+        
 
             if patience <= iter:
                 done_looping = True
@@ -386,25 +356,25 @@ def mlp_mnist(learning_rate=0.01, n_epochs=20,
 
 def predict():
 
-    # load the saved model
-    # classifier = pickle.load(open('mlp_best_model.pkl'))
+    load the saved model
+    classifier = pickle.load(open('mlp_best_model.pkl'))
 
-    # compile a predictor function
-    # predict_model = theano.function(
-    #     inputs=[classifier.input],
-    #     outputs=classifier.y_pred)
+    compile a predictor function
+    predict_model = theano.function(
+        inputs=[classifier.input],
+        outputs=classifier.y_pred)
 
-    # # We can test it on some examples from test test `  
-    # dataset='final_data.pkl.gz'
-    # datasets = load_data(dataset)
-    # train_set_x,train_set_y=datasets[0];
-    # train_set_x=train_set_x.get_value();
-    # predicted_values = predict_model(train_set_x[0:5])
+    # We can test it on some examples from test test `  
+    dataset='final_data.pkl.gz'
+    datasets = load_data(dataset)
+    train_set_x,train_set_y=datasets[0];
+    train_set_x=train_set_x.get_value();
+    predicted_values = predict_model(train_set_x[0:5])
 
-    # print("Predicted values for the first 5 examples in test set:")
-    # print(predicted_values)
+    print("Predicted values for the first 5 examples in test set:")
+    print(predicted_values)
 
-    print(classifier.logRegLayer.W.get_value())
+   
 
 
 if __name__ == '__main__':
